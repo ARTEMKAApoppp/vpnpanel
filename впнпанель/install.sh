@@ -32,7 +32,7 @@ banner() {
   echo
 }
 
-TOTAL=6; N=0
+TOTAL=7; N=0
 step() {
   local msg="$1"; shift
   N=$((N+1))
@@ -53,8 +53,8 @@ step() {
 [ "$(id -u)" -eq 0 ] || { echo "Запустите от root: sudo bash install.sh"; exit 1; }
 
 if [ "$1" = "uninstall" ]; then
-  systemctl disable --now vpnpanel 2>/dev/null || true
-  rm -f /etc/systemd/system/vpnpanel.service; systemctl daemon-reload
+  systemctl disable --now vpnpanel caddy-vpnpanel 2>/dev/null || true
+  rm -f /etc/systemd/system/vpnpanel.service /etc/systemd/system/caddy-vpnpanel.service; systemctl daemon-reload
   echo "${G}Панель удалена.${R} Данные остались в $APP/data, Xray не тронут."; exit 0
 fi
 
@@ -157,11 +157,54 @@ WantedBy=multi-user.target
 UNIT
   systemctl daemon-reload; systemctl enable vpnpanel; systemctl restart vpnpanel
 }
+s_https() {
+  . "$APP/.env"
+  local HP="${HTTPS_PORT:-8443}"
+  local DOM="${DOMAIN:-${PANEL_DOMAIN:-$(echo "$SERVER_HOST" | tr . -).sslip.io}}"
+  if [ ! -x /usr/local/bin/caddy ]; then
+    local a=amd64; case "$(uname -m)" in aarch64|arm64) a=arm64;; armv7l) a=armv7;; esac
+    curl -fsSL "https://caddyserver.com/api/download?os=linux&arch=$a" -o /usr/local/bin/caddy
+    chmod +x /usr/local/bin/caddy
+  fi
+  id caddy >/dev/null 2>&1 || useradd --system --home-dir /var/lib/caddy --create-home --shell /usr/sbin/nologin caddy
+  mkdir -p /etc/caddy
+  cat > /etc/caddy/Caddyfile <<CADDY
+$DOM:$HP {
+	encode gzip
+	reverse_proxy 127.0.0.1:$PANEL_PORT
+}
+CADDY
+  cat > /etc/systemd/system/caddy-vpnpanel.service <<UNIT
+[Unit]
+Description=Caddy HTTPS for VPN Panel
+After=network.target
+
+[Service]
+User=caddy
+Environment=HOME=/var/lib/caddy
+ExecStart=/usr/local/bin/caddy run --config /etc/caddy/Caddyfile
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+  sed -i '/^PANEL_BIND=/d;/^PANEL_DOMAIN=/d;/^HTTPS_PORT=/d;/^PUBLIC_URL=/d' "$APP/.env"
+  cat >> "$APP/.env" <<ENV
+PANEL_BIND=127.0.0.1
+PANEL_DOMAIN=$DOM
+HTTPS_PORT=$HP
+PUBLIC_URL=https://$DOM:$HP
+ENV
+  systemctl daemon-reload; systemctl enable caddy-vpnpanel; systemctl restart caddy-vpnpanel
+}
 s_firewall() {
   . "$APP/.env"
-  if command -v ufw >/dev/null && ufw status | grep -q active; then ufw allow "$PANEL_PORT"/tcp; ufw allow 443/tcp; fi
+  local HP="${HTTPS_PORT:-8443}"
+  if command -v ufw >/dev/null && ufw status | grep -q active; then ufw allow 80/tcp; ufw allow "$HP"/tcp; ufw allow 443/tcp; fi
   if command -v firewall-cmd >/dev/null && systemctl is-active --quiet firewalld; then
-    firewall-cmd --permanent --add-port="$PANEL_PORT"/tcp; firewall-cmd --permanent --add-port=443/tcp; firewall-cmd --reload
+    firewall-cmd --permanent --add-port=80/tcp; firewall-cmd --permanent --add-port="$HP"/tcp; firewall-cmd --permanent --add-port=443/tcp; firewall-cmd --reload
   fi
   true
 }
@@ -169,16 +212,20 @@ s_firewall() {
 # ---------- run ----------
 banner
 if [ "$1" = "update" ]; then
-  TOTAL=2
+  TOTAL=4
   step "Скачиваю последнюю версию панели" s_files
+  step "Настраиваю HTTPS (Caddy + Let's Encrypt)" s_https
   step "Перезапускаю панель" systemctl restart vpnpanel
-  echo; echo "  ${G}${B}Обновлено!${R}"; echo; exit 0
+  step "Настраиваю файрвол" s_firewall
+  . "$APP/.env"
+  echo; echo "  ${G}${B}Обновлено!${R}  Панель: ${C}${PUBLIC_URL}${R}"; echo; exit 0
 fi
 
 step "Устанавливаю системные пакеты" s_deps
 step "Устанавливаю Node.js" s_node
 step "Устанавливаю Xray-core и файлы панели" s_xray_and_files
 step "Создаю логин и пароль" s_config
+step "Настраиваю HTTPS (Caddy + Let's Encrypt)" s_https
 step "Запускаю службу панели" s_service
 step "Настраиваю файрвол" s_firewall
 
@@ -188,13 +235,14 @@ echo
 echo "  ${P}╔══════════════════════════════════════════════════╗${R}"
 echo "  ${P}║${R}  ${G}${B}✔ VPN Panel успешно установлена!${R}                  ${P}║${R}"
 echo "  ${P}╠══════════════════════════════════════════════════╣${R}"
-printf "  ${P}║${R}  ${D}Панель${R}   ${C}${B}%-39s${R}${P}║${R}\n" "http://$SERVER_HOST:$PANEL_PORT"
+printf "  ${P}║${R}  ${D}Панель${R}   ${C}${B}%-39s${R}${P}║${R}\n" "$PUBLIC_URL"
 printf "  ${P}║${R}  ${D}Логин${R}    ${Y}${B}%-39s${R}${P}║${R}\n" "$ADMIN_USER"
 printf "  ${P}║${R}  ${D}Пароль${R}   ${Y}${B}%-39s${R}${P}║${R}\n" "$ADMIN_PASS"
 echo "  ${P}╚══════════════════════════════════════════════════╝${R}"
 echo
 echo "  ${D}Данные для входа сохранены в $APP/.env${R}"
 echo "  ${D}Обновить: bash install.sh update   Удалить: bash install.sh uninstall${R}"
+echo "  ${D}HTTPS: порт 80 должен быть свободен (для сертификата), порт ${HTTPS_PORT} открыт. Свой домен: DOMAIN=vpn.example.com bash install.sh update${R}"
 echo "  ${D}Порт 443 занят? Смените порт VPN в настройках панели.${R}"
 echo "  ${D}Статус службы: systemctl status vpnpanel   Логи: journalctl -u vpnpanel -f${R}"
 echo
