@@ -16,6 +16,7 @@ const DATA = path.join(DIR, 'data');
 const DBF = path.join(DATA, 'db.json');
 fs.mkdirSync(DATA, { recursive: true });
 
+const proto = (req) => (req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim();
 const rnd = (n) => crypto.randomBytes(n).toString('hex');
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest();
 const GB = 1024 ** 3;
@@ -190,7 +191,7 @@ http.createServer(async (req, res) => {
     if (m) {
       const u = db.users.find((x) => x.token === m[1]);
       if (!u) return send(res, 404, 'Not found');
-      const base = db.settings.subBase || ('http://' + req.headers.host);
+      const base = db.settings.subBase || (proto(req) + '://' + req.headers.host);
       if (!url.searchParams.has('raw') && /text\/html/.test(req.headers.accept || '') && !/v2ray|happ|hiddify|clash|sing|streisand|nekobox/i.test(req.headers['user-agent'] || ''))
         return send(res, 200, subPage(u, base), { 'Content-Type': 'text/html; charset=utf-8' });
       const body = isActive(u) ? link(u) : '';
@@ -204,14 +205,14 @@ http.createServer(async (req, res) => {
       return send(res, 200, fs.readFileSync(path.join(DIR, 'index.html')), { 'Content-Type': 'text/html; charset=utf-8' });
 
     if (p === '/api/login' && req.method === 'POST') {
-      const ip = req.socket.remoteAddress; const a = attempts.get(ip) || { n: 0, t: Date.now() };
+      const ip = (process.env.PANEL_BIND && req.headers['x-forwarded-for']) || req.socket.remoteAddress; const a = attempts.get(ip) || { n: 0, t: Date.now() };
       if (Date.now() - a.t > 600000) { a.n = 0; a.t = Date.now(); }
       if (a.n >= 8) return send(res, 429, { error: 'Слишком много попыток, подождите 10 минут' });
       const b = await readBody(req);
       const ok = b.username === ADMIN_USER && crypto.timingSafeEqual(sha(b.password || ''), sha(ADMIN_PASS));
       if (!ok) { a.n++; attempts.set(ip, a); return send(res, 401, { error: 'Неверный логин или пароль' }); }
       const t = rnd(24); sessions.set(t, Date.now() + 7 * 864e5);
-      return send(res, 200, { ok: true }, { 'Set-Cookie': `vp_sid=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800` });
+      return send(res, 200, { ok: true }, { 'Set-Cookie': `vp_sid=${t}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${proto(req) === 'https' ? '; Secure' : ''}` });
     }
     if (!p.startsWith('/api/')) return send(res, 404, 'Not found');
     if (!authed(req)) return send(res, 401, { error: 'auth' });
@@ -220,7 +221,7 @@ http.createServer(async (req, res) => {
     if (p === '/api/state') {
       return sysInfo((sys) => send(res, 200, {
         sys, settings: { ...db.settings, privateKey: undefined }, users: db.users.map(pubUser),
-        origin: db.settings.subBase || ('http://' + req.headers.host),
+        origin: db.settings.subBase || (proto(req) + '://' + req.headers.host),
       }));
     }
     if (p === '/api/users' && req.method === 'POST') {
@@ -270,7 +271,7 @@ http.createServer(async (req, res) => {
     }
     return send(res, 404, { error: 'not found' });
   } catch (e) { console.error(e); send(res, 500, { error: 'Внутренняя ошибка' }); }
-}).listen(PORT, '0.0.0.0', () => {
+}).listen(PORT, process.env.PANEL_BIND || '0.0.0.0', () => {
   load();
   applyXray();
   setInterval(pollStats, 30000);
