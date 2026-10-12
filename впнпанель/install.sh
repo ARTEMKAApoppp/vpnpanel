@@ -4,6 +4,9 @@
 #   bash <(curl -fsSL https://raw.githubusercontent.com/ARTEMKAApoppp/vpnpanel/main/install.sh)
 #   or: git clone https://github.com/ARTEMKAApoppp/vpnpanel.git && cd vpnpanel && bash install.sh
 #   bash install.sh update | uninstall
+set +m  # отключаем job control — иначе фоновые шаги печатают "[1] Stopped/Done" и могут зависнуть на SIGTTIN
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a  # не спрашивать про перезапуск служб при apt install
 REPO="ARTEMKAApoppp/vpnpanel"
 SUBDIR="%D0%B2%D0%BF%D0%BD%D0%BF%D0%B0%D0%BD%D0%B5%D0%BB%D1%8C"  # впнпанель, URL-encoded
 APP=/opt/vpnpanel
@@ -33,7 +36,7 @@ TOTAL=6; N=0
 step() {
   local msg="$1"; shift
   N=$((N+1))
-  ( "$@" ) >>"$LOG" 2>&1 &
+  ( "$@" ) </dev/null >>"$LOG" 2>&1 &
   local pid=$! i=0 fr='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
   tput civis 2>/dev/null || true
   while kill -0 "$pid" 2>/dev/null; do
@@ -63,7 +66,6 @@ s_deps() {
   for b in curl unzip openssl; do command -v "$b" >/dev/null || NEED="$NEED $b"; done
   [ -z "$NEED" ] && return 0
   if command -v apt-get >/dev/null; then
-    export DEBIAN_FRONTEND=noninteractive
     # пропускаем apt-get update если кэш свежее часа — это основной источник задержки
     if [ ! -f /var/cache/apt/pkgcache.bin ] || [ -n "$(find /var/lib/apt/lists -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
       apt-get update -y -qq
