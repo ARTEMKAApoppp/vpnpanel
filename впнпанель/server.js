@@ -21,10 +21,15 @@ const rnd = (n) => crypto.randomBytes(n).toString('hex');
 const sha = (s) => crypto.createHash('sha256').update(String(s)).digest();
 const GB = 1024 ** 3;
 
+const DEF_PLANS = [
+  { id: 'p1', name: 'Пробный', price: 0, days: 3, limitGb: 5 },
+  { id: 'p2', name: '1 месяц', price: 99, days: 30, limitGb: 0 },
+  { id: 'p3', name: '3 месяца', price: 279, days: 90, limitGb: 0 },
+];
 // ---------- DB ----------
 let db;
 function load() {
-  if (fs.existsSync(DBF)) { db = JSON.parse(fs.readFileSync(DBF, 'utf8')); return; }
+  if (fs.existsSync(DBF)) { db = JSON.parse(fs.readFileSync(DBF, 'utf8')); if (!db.plans) db.plans = DEF_PLANS; return; }
   let priv = '', pub = '';
   try {
     const out = execFileSync(XRAY_BIN, ['x25519']).toString();
@@ -36,7 +41,7 @@ function load() {
       title: 'VPN Panel', host: process.env.SERVER_HOST || '', port: 443,
       sni: 'www.microsoft.com', subBase: '', privateKey: priv, publicKey: pub, shortId: rnd(4),
     },
-    users: [],
+    users: [], plans: DEF_PLANS,
   };
   save();
 }
@@ -220,7 +225,7 @@ http.createServer(async (req, res) => {
     if (p === '/api/logout') { sessions.delete(cookies(req).vp_sid); return send(res, 200, { ok: true }, { 'Set-Cookie': 'vp_sid=; Path=/; Max-Age=0' }); }
     if (p === '/api/state') {
       return sysInfo((sys) => send(res, 200, {
-        sys, settings: { ...db.settings, privateKey: undefined }, users: db.users.map(pubUser),
+        sys, settings: { ...db.settings, privateKey: undefined }, users: db.users.map(pubUser), plans: db.plans,
         origin: db.settings.subBase || (proto(req) + '://' + req.headers.host),
       }));
     }
@@ -228,11 +233,12 @@ http.createServer(async (req, res) => {
       const b = await readBody(req);
       const name = String(b.name || '').trim().slice(0, 40);
       if (!name) return send(res, 400, { error: 'Укажите имя' });
-      const days = Number(b.days) || 0, lim = Number(b.limitGb) || 0;
+      const pl = db.plans.find((x) => x.id === b.planId);
+      const days = pl ? pl.days : Number(b.days) || 0, lim = pl ? pl.limitGb : Number(b.limitGb) || 0;
       const u = {
         id: rnd(4), name, uuid: crypto.randomUUID(), token: rnd(12), created: Date.now(),
         expire: days ? Date.now() + days * 864e5 : 0, limit: Math.round(lim * GB), used: 0, up: 0, down: 0,
-        enabled: true, note: String(b.note || '').slice(0, 120),
+        enabled: true, plan: pl ? pl.name : '', note: String(b.note || '').slice(0, 120),
       };
       db.users.push(u); save(); enforce();
       return send(res, 200, pubUser(u));
@@ -255,9 +261,27 @@ http.createServer(async (req, res) => {
         return send(res, 200, pubUser(u));
       }
     }
+    const planOf = (b) => ({ name: String(b.name || '').trim().slice(0, 40), price: Math.max(0, Number(b.price) || 0), days: Math.max(0, Number(b.days) || 0), limitGb: Math.max(0, Number(b.limitGb) || 0) });
+    if (p === '/api/plans' && req.method === 'POST') {
+      const pl = planOf(await readBody(req));
+      if (!pl.name) return send(res, 400, { error: 'Укажите название' });
+      pl.id = rnd(3); db.plans.push(pl); save(); return send(res, 200, pl);
+    }
+    m = /^\/api\/plans\/([a-f0-9]+)$/.exec(p);
+    if (m) {
+      const i = db.plans.findIndex((x) => x.id === m[1]);
+      if (i < 0) return send(res, 404, { error: 'Нет такого тарифа' });
+      if (req.method === 'DELETE') { db.plans.splice(i, 1); save(); return send(res, 200, { ok: true }); }
+      if (req.method === 'PUT') {
+        const pl = planOf(await readBody(req));
+        if (!pl.name) return send(res, 400, { error: 'Укажите название' });
+        db.plans[i] = { id: m[1], ...pl }; save(); return send(res, 200, db.plans[i]);
+      }
+    }
     if (p === '/api/settings' && req.method === 'PUT') {
       const b = await readBody(req); const s = db.settings;
       if (typeof b.title === 'string' && b.title.trim()) s.title = b.title.trim().slice(0, 40);
+      if (typeof b.support === 'string') s.support = b.support.trim().slice(0, 200);
       if (typeof b.host === 'string') s.host = b.host.trim();
       if (typeof b.sni === 'string' && b.sni.trim()) s.sni = b.sni.trim();
       if (typeof b.subBase === 'string') s.subBase = b.subBase.trim().replace(/\/+$/, '');
