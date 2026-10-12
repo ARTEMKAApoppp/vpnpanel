@@ -5,6 +5,7 @@
 #   or: git clone https://github.com/ARTEMKAApoppp/vpnpanel.git && cd vpnpanel && bash install.sh
 #   bash install.sh update | uninstall
 REPO="ARTEMKAApoppp/vpnpanel"
+SUBDIR="%D0%B2%D0%BF%D0%BD%D0%BF%D0%B0%D0%BD%D0%B5%D0%BB%D1%8C"  # впнпанель, URL-encoded
 APP=/opt/vpnpanel
 LOG=/tmp/vpnpanel-install.log
 PANEL_PORT="${PANEL_PORT:-8080}"
@@ -28,7 +29,7 @@ banner() {
   echo
 }
 
-TOTAL=7; N=0
+TOTAL=6; N=0
 step() {
   local msg="$1"; shift
   N=$((N+1))
@@ -58,10 +59,18 @@ fi
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
 
 s_deps() {
+  NEED=""
+  for b in curl unzip openssl; do command -v "$b" >/dev/null || NEED="$NEED $b"; done
+  [ -z "$NEED" ] && return 0
   if command -v apt-get >/dev/null; then
-    export DEBIAN_FRONTEND=noninteractive; apt-get update -y; apt-get install -y curl unzip ca-certificates openssl
-  elif command -v dnf >/dev/null; then dnf install -y curl unzip ca-certificates openssl
-  elif command -v yum >/dev/null; then yum install -y curl unzip ca-certificates openssl
+    export DEBIAN_FRONTEND=noninteractive
+    # пропускаем apt-get update если кэш свежее часа — это основной источник задержки
+    if [ ! -f /var/cache/apt/pkgcache.bin ] || [ -n "$(find /var/lib/apt/lists -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
+      apt-get update -y -qq
+    fi
+    apt-get install -y -qq --no-install-recommends curl unzip ca-certificates openssl
+  elif command -v dnf >/dev/null; then dnf install -y -q curl unzip ca-certificates openssl
+  elif command -v yum >/dev/null; then yum install -y -q curl unzip ca-certificates openssl
   fi
 }
 s_node() {
@@ -74,8 +83,17 @@ s_node() {
 }
 s_xray() {
   [ -x /usr/local/bin/xray ] && return 0
-  bash -c "$(curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install
+  curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh -o /tmp/xray-install.sh
+  bash /tmp/xray-install.sh @ install
   systemctl enable xray || true
+}
+s_xray_and_files() {
+  s_xray & local pid_xray=$!
+  s_files & local pid_files=$!
+  local rc=0
+  wait "$pid_xray" || rc=1
+  wait "$pid_files" || rc=1
+  return $rc
 }
 s_files() {
   mkdir -p "$APP/data"
@@ -83,8 +101,8 @@ s_files() {
     cp "$SELF_DIR/server.js" "$SELF_DIR/index.html" "$APP/"
   else
     for br in main master; do
-      if curl -fsSL "https://raw.githubusercontent.com/$REPO/$br/server.js" -o "$APP/server.js" &&
-         curl -fsSL "https://raw.githubusercontent.com/$REPO/$br/index.html" -o "$APP/index.html"; then return 0; fi
+      if curl -fsSL "https://raw.githubusercontent.com/$REPO/$br/$SUBDIR/server.js" -o "$APP/server.js" &&
+         curl -fsSL "https://raw.githubusercontent.com/$REPO/$br/$SUBDIR/index.html" -o "$APP/index.html"; then return 0; fi
     done
     return 1
   fi
@@ -141,8 +159,7 @@ fi
 
 step "Устанавливаю системные пакеты" s_deps
 step "Устанавливаю Node.js" s_node
-step "Устанавливаю Xray-core" s_xray
-step "Копирую файлы панели" s_files
+step "Устанавливаю Xray-core и файлы панели" s_xray_and_files
 step "Создаю логин и пароль" s_config
 step "Запускаю службу панели" s_service
 step "Настраиваю файрвол" s_firewall
@@ -161,4 +178,5 @@ echo
 echo "  ${D}Данные для входа сохранены в $APP/.env${R}"
 echo "  ${D}Обновить: bash install.sh update   Удалить: bash install.sh uninstall${R}"
 echo "  ${D}Порт 443 занят? Смените порт VPN в настройках панели.${R}"
+echo "  ${D}Статус службы: systemctl status vpnpanel   Логи: journalctl -u vpnpanel -f${R}"
 echo
