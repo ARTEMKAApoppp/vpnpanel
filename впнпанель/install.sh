@@ -63,16 +63,16 @@ SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
 
 s_deps() {
   NEED=""
-  for b in curl unzip openssl; do command -v "$b" >/dev/null || NEED="$NEED $b"; done
+  for b in curl unzip openssl git; do command -v "$b" >/dev/null || NEED="$NEED $b"; done
   [ -z "$NEED" ] && return 0
   if command -v apt-get >/dev/null; then
     # пропускаем apt-get update если кэш свежее часа — это основной источник задержки
     if [ ! -f /var/cache/apt/pkgcache.bin ] || [ -n "$(find /var/lib/apt/lists -maxdepth 0 -mmin +60 2>/dev/null)" ]; then
       apt-get update -y -qq
     fi
-    apt-get install -y -qq --no-install-recommends curl unzip ca-certificates openssl
-  elif command -v dnf >/dev/null; then dnf install -y -q curl unzip ca-certificates openssl
-  elif command -v yum >/dev/null; then yum install -y -q curl unzip ca-certificates openssl
+    apt-get install -y -qq --no-install-recommends curl unzip ca-certificates openssl git
+  elif command -v dnf >/dev/null; then dnf install -y -q curl unzip ca-certificates openssl git
+  elif command -v yum >/dev/null; then yum install -y -q curl unzip ca-certificates openssl git
   fi
 }
 s_node() {
@@ -85,8 +85,12 @@ s_node() {
 }
 s_xray() {
   [ -x /usr/local/bin/xray ] && return 0
-  curl -fsSL https://github.com/XTLS/Xray-install/raw/main/install-release.sh -o /tmp/xray-install.sh
-  bash /tmp/xray-install.sh @ install
+  if ! curl -fsSL https://raw.githubusercontent.com/XTLS/Xray-install/main/install-release.sh -o /tmp/xray-install.sh; then
+    echo "не удалось скачать install-release.sh для Xray" >&2
+    return 1
+  fi
+  bash /tmp/xray-install.sh install
+  [ -x /usr/local/bin/xray ] || { echo "xray не установился" >&2; return 1; }
   systemctl enable xray || true
 }
 s_xray_and_files() {
@@ -101,13 +105,25 @@ s_files() {
   mkdir -p "$APP/data"
   if [ -f "$SELF_DIR/server.js" ] && [ -f "$SELF_DIR/index.html" ]; then
     cp "$SELF_DIR/server.js" "$SELF_DIR/index.html" "$APP/"
-  else
-    for br in main master; do
-      if curl -fsSL "https://raw.githubusercontent.com/$REPO/$br/$SUBDIR/server.js" -o "$APP/server.js" &&
-         curl -fsSL "https://raw.githubusercontent.com/$REPO/$br/$SUBDIR/index.html" -o "$APP/index.html"; then return 0; fi
-    done
-    return 1
+    return 0
   fi
+  # основной способ: git clone — надёжно работает с кириллицей в пути подпапки
+  if command -v git >/dev/null; then
+    rm -rf /tmp/vpnpanel-src
+    if git clone --depth 1 "https://github.com/$REPO.git" /tmp/vpnpanel-src >/dev/null 2>&1; then
+      SRC="$(find /tmp/vpnpanel-src -maxdepth 2 -iname server.js -printf '%h\n' | head -n1)"
+      if [ -n "$SRC" ] && [ -f "$SRC/server.js" ] && [ -f "$SRC/index.html" ]; then
+        cp "$SRC/server.js" "$SRC/index.html" "$APP/"
+        return 0
+      fi
+    fi
+  fi
+  # запасной способ: прямые ссылки на raw-файлы
+  for br in main master; do
+    if curl -fsSL "https://raw.githubusercontent.com/$REPO/$br/$SUBDIR/server.js" -o "$APP/server.js" &&
+       curl -fsSL "https://raw.githubusercontent.com/$REPO/$br/$SUBDIR/index.html" -o "$APP/index.html"; then return 0; fi
+  done
+  return 1
 }
 s_config() {
   if [ ! -f "$APP/.env" ]; then
