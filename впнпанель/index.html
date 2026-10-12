@@ -1,213 +1,100 @@
-<!doctype html>
-<html lang="ru">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VPN Panel</title>
+<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Панель</title>
 <style>
-:root{--bg:#07070f;--card:rgba(255,255,255,.05);--bd:rgba(255,255,255,.1);--tx:#eef0ff;--mut:#8b90b0;--a:#7c6cff;--b:#18c7ff;--ok:#2ee59d;--warn:#ffb84d;--bad:#ff5d7a}
-*{box-sizing:border-box;margin:0}
-html,body{min-height:100%}
-body{background:var(--bg);color:var(--tx);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}
-.blob{position:fixed;border-radius:50%;filter:blur(90px);opacity:.45;z-index:0;animation:fl 18s ease-in-out infinite alternate;pointer-events:none}
-.b1{width:520px;height:520px;background:#5b3df5;top:-160px;left:-120px}
-.b2{width:460px;height:460px;background:#0ab7ff;bottom:-160px;right:-100px;animation-delay:-6s}
-.b3{width:340px;height:340px;background:#ff3d8b;top:40%;left:55%;opacity:.22;animation-delay:-11s}
-@keyframes fl{to{transform:translate(70px,50px) scale(1.15)}}
-.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:22px 16px 60px}
-.glass{background:var(--card);border:1px solid var(--bd);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:22px}
-button,input{font:inherit;color:inherit}
-.btn{border:0;cursor:pointer;padding:11px 18px;border-radius:14px;background:linear-gradient(90deg,var(--a),var(--b));color:#fff;font-weight:650;font-size:14px;transition:.2s;box-shadow:0 8px 28px #7c6cff40}
-.btn:hover{transform:translateY(-2px);box-shadow:0 12px 34px #18c7ff50}
-.btn.g{background:rgba(255,255,255,.08);box-shadow:none;border:1px solid var(--bd)}
-.btn.g:hover{background:rgba(255,255,255,.14)}
-.btn.s{padding:8px 11px;font-size:13px;border-radius:11px}
-.btn.d{background:rgba(255,93,122,.15);color:var(--bad);border:1px solid rgba(255,93,122,.3);box-shadow:none}
-input{width:100%;padding:13px 15px;border-radius:13px;background:rgba(0,0,0,.35);border:1px solid var(--bd);outline:none;transition:.2s;font-size:14px}
-input:focus{border-color:var(--a);box-shadow:0 0 0 3px #7c6cff33}
-label{display:block;font-size:12px;color:var(--mut);margin:12px 0 6px}
-.hidden{display:none!important}
-/* login */
-#login{min-height:100vh;display:grid;place-items:center;position:relative;z-index:1;padding:16px}
-.lg{width:100%;max-width:400px;padding:36px 30px;text-align:center}
-.logo{width:68px;height:68px;border-radius:22px;margin:0 auto 18px;display:grid;place-items:center;font-size:32px;background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 12px 40px #7c6cff77}
-.lg h1{font-size:25px;margin-bottom:6px}.lg p{color:var(--mut);font-size:14px;margin-bottom:10px}
-.err{color:var(--bad);font-size:13px;min-height:18px;margin-top:10px}
-/* header */
-header{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
-header .logo{width:46px;height:46px;font-size:22px;margin:0;border-radius:15px}
-header h2{font-size:21px}header small{color:var(--mut)}
-.sp{flex:1}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px}
-.st{padding:18px 20px}.st .l{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
-.st .v{font-size:27px;font-weight:750;margin-top:6px}.st .h{font-size:12px;color:var(--mut);margin-top:4px}
-.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:var(--bad);box-shadow:0 0 10px currentColor;color:var(--bad)}
-.dot.on{background:var(--ok);color:var(--ok)}
-.bar{height:6px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:8px}
-.bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--a),var(--b))}
-.tool{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}.tool input{flex:1;min-width:200px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
-.u{padding:20px;transition:.25s;animation:in .4s both}
-.u:hover{transform:translateY(-4px);border-color:rgba(124,108,255,.5);box-shadow:0 18px 50px #7c6cff25}
-@keyframes in{from{opacity:0;transform:translateY(12px)}}
-.u .top{display:flex;align-items:center;gap:12px}
-.av{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-weight:800;background:linear-gradient(135deg,var(--a),var(--b));flex:none}
-.u .nm{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.u .nt{font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.badge{margin-left:auto;font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:.04em;flex:none}
-.active{background:rgba(46,229,157,.15);color:var(--ok)}.disabled{background:rgba(139,144,176,.2);color:var(--mut)}
-.expired,.limited{background:rgba(255,93,122,.15);color:var(--bad)}
-.meta{display:flex;justify-content:space-between;font-size:13px;color:var(--mut);margin-top:16px}
-.meta b{color:var(--tx)}
-.act{display:flex;gap:7px;margin-top:16px;flex-wrap:wrap}.act .btn{flex:1;min-width:0;white-space:nowrap}
-.empty{padding:60px 20px;text-align:center;color:var(--mut)}
-/* modal */
-.ov{position:fixed;inset:0;background:rgba(3,3,10,.7);backdrop-filter:blur(6px);z-index:10;display:grid;place-items:center;padding:16px;animation:fd .2s}
-@keyframes fd{from{opacity:0}}
-.md{width:100%;max-width:440px;max-height:92vh;overflow:auto;padding:26px;background:#12122a;animation:in .3s}
-.md h3{font-size:19px;margin-bottom:4px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.qr{display:grid;place-items:center;margin:16px 0}.qr div{background:#fff;padding:12px;border-radius:16px}
-.code{word-break:break-all;font-size:12px;background:rgba(0,0,0,.4);padding:11px;border-radius:12px;color:#9cf;margin-top:8px;cursor:pointer;border:1px dashed var(--bd)}
-.mf{display:flex;gap:10px;margin-top:20px}.mf .btn{flex:1}
-#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:20;display:flex;flex-direction:column;gap:8px;align-items:center}
-.tt{background:#1d1d3d;border:1px solid var(--bd);padding:11px 18px;border-radius:13px;font-size:14px;animation:in .25s;box-shadow:0 10px 40px #0008}
+:root{--bg:#090c11;--c1:#111720;--c2:#182130;--ln:#ffffff14;--tx:#e9eef6;--mu:#8190a6;--a:#b8ff3d;--b:#35e0c2;--bad:#ff5d6c;--warn:#ffb84d;--r:18px}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(900px 500px at 85% -10%,#35e0c21f,transparent),radial-gradient(700px 500px at -10% 110%,#b8ff3d14,transparent),var(--bg);color:var(--tx);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+button,input,select{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+nav{padding:20px 14px;border-right:1px solid var(--ln);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:4px}
+.logo{font-weight:800;font-size:20px;padding:6px 12px 18px;letter-spacing:-.5px}.logo i{color:var(--a);font-style:normal}
+nav button.t{background:0;border:0;text-align:left;padding:11px 14px;border-radius:12px;color:var(--mu);cursor:pointer;display:flex;gap:10px;align-items:center}
+nav button.t.on{background:var(--c2);color:var(--tx);box-shadow:inset 3px 0 var(--a)}nav button.t:hover{color:var(--tx)}
+.sp{flex:1}main{padding:28px 32px;max-width:1200px;width:100%}
+h1{margin:0;font-size:28px;letter-spacing:-.8px}.sub{color:var(--mu);margin:2px 0 22px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.g2{grid-template-columns:1fr 1fr}
+.card{background:linear-gradient(160deg,var(--c2),var(--c1));border:1px solid var(--ln);border-radius:var(--r);padding:18px}
+.k{color:var(--mu);font-size:13px}.v{font-size:32px;font-weight:800;letter-spacing:-1px;margin:4px 0}.v small{font-size:15px;color:var(--mu);font-weight:600}
+.btn{border:0;border-radius:12px;padding:10px 16px;cursor:pointer;font-weight:700;background:var(--c2);border:1px solid var(--ln)}
+.btn.p{background:linear-gradient(90deg,var(--a),var(--b));color:#06100a;border:0}.btn.d{color:var(--bad)}.btn:hover{filter:brightness(1.15)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.chip{padding:7px 14px;border-radius:99px;border:1px solid var(--ln);background:var(--c1);cursor:pointer;color:var(--mu)}.chip.on{background:var(--a);color:#06100a;border-color:0;font-weight:700}
+input,select{background:#0006;border:1px solid var(--ln);border-radius:12px;padding:10px 12px;width:100%;outline:0}input:focus,select:focus{border-color:var(--b)}
+label{display:block;color:var(--mu);font-size:12px;margin:12px 0 5px}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:640px}th{color:var(--mu);font-weight:500;text-align:left;font-size:12px;padding:10px 12px}td{padding:12px;border-top:1px solid var(--ln)}tr.r{cursor:pointer}tr.r:hover{background:#ffffff08}
+.bar{height:6px;border-radius:9px;background:#ffffff14;overflow:hidden;margin-top:6px;min-width:110px}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--a),var(--b))}.bar.w i{background:var(--bad)}
+.tag{padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700}.tag.ok{background:#b8ff3d22;color:var(--a)}.tag.bad{background:#ff5d6c22;color:var(--bad)}.tag.mut{background:#ffffff14;color:var(--mu)}
+.ov{position:fixed;inset:0;background:#000a;backdrop-filter:blur(6px);display:grid;place-items:center;padding:16px;z-index:9;overflow:auto}
+.md{background:var(--c1);border:1px solid var(--ln);border-radius:22px;padding:24px;width:100%;max-width:460px;max-height:94vh;overflow:auto}.md h3{margin:0 0 6px;font-size:20px}
+.row{display:flex;gap:10px}.row>*{flex:1}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+code{display:block;word-break:break-all;background:#0006;padding:10px;border-radius:10px;font-size:12px;color:var(--b);margin-top:8px}
+.qr{display:grid;place-items:center;margin:14px 0}.qr div{background:#fff;padding:10px;border-radius:14px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--c2);border:1px solid var(--ln);padding:12px 20px;border-radius:14px;z-index:20}
+.lg{min-height:100vh;display:grid;place-items:center;padding:16px}.lg .md{max-width:360px}
+@media(max-width:800px){.app{grid-template-columns:1fr}nav{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;flex-direction:row;z-index:5;background:var(--c1);padding:6px;border:0;border-top:1px solid var(--ln)}.logo,.sp{display:none}nav button.t{flex:1;justify-content:center;font-size:12px;padding:10px 4px}nav button.t.on{box-shadow:none}main{padding:18px 14px 90px}.g2{grid-template-columns:1fr}}
 </style>
-</head>
-<body>
-<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-
-<div id="login" class="hidden">
-  <form class="glass lg" onsubmit="return doLogin(event)">
-    <div class="logo">🛡</div>
-    <h1>VPN Panel</h1><p>Войдите в панель управления</p>
-    <label style="text-align:left">Логин</label><input id="lu" autocomplete="username" required>
-    <label style="text-align:left">Пароль</label><input id="lp" type="password" autocomplete="current-password" required>
-    <div class="err" id="le"></div>
-    <button class="btn" style="width:100%;margin-top:6px;padding:14px">Войти</button>
-  </form>
-</div>
-
-<div id="app" class="wrap hidden">
-  <header>
-    <div class="logo">🛡</div>
-    <div><h2 id="ttl">VPN Panel</h2><small>VLESS · Reality · Xray</small></div>
-    <div class="sp"></div>
-    <button class="btn g" onclick="openSettings()">⚙ Настройки</button>
-    <button class="btn g" onclick="logout()">Выйти</button>
-  </header>
-  <div class="stats" id="stats"></div>
-  <div class="tool">
-    <input id="q" placeholder="🔍 Поиск пользователей…" oninput="render()">
-    <button class="btn" onclick="openUser()">＋ Новый пользователь</button>
-  </div>
-  <div class="grid" id="grid"></div>
-</div>
-<div id="toast"></div>
-<div id="modal"></div>
-
+<div id="root"></div>
 <script>
-const $=s=>document.querySelector(s);
-const GB=1024**3;
-let S=null,timer=null;
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function toast(t){const e=document.createElement('div');e.className='tt';e.textContent=t;$('#toast').appendChild(e);setTimeout(()=>e.remove(),2600)}
-async function api(m,u,b){
-  const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
-  if(r.status===401&&u!=='/api/login'){showLogin();throw new Error('auth')}
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(j.error||'Ошибка');
-  return j;
-}
-function fmt(b){if(b<1024**2)return (b/1024).toFixed(0)+' KB';if(b<GB)return (b/1024**2).toFixed(1)+' MB';if(b<1024*GB)return (b/GB).toFixed(2)+' GB';return (b/GB/1024).toFixed(2)+' TB'}
-function showLogin(){clearInterval(timer);$('#app').classList.add('hidden');$('#login').classList.remove('hidden')}
-async function doLogin(e){
-  e.preventDefault();$('#le').textContent='';
-  try{await api('POST','/api/login',{username:$('#lu').value,password:$('#lp').value});$('#lp').value='';start()}
-  catch(x){$('#le').textContent=x.message}
-  return false;
-}
-async function logout(){await api('POST','/api/logout').catch(()=>{});showLogin()}
-async function start(){
-  try{await refresh()}catch(e){return}
-  $('#login').classList.add('hidden');$('#app').classList.remove('hidden');
-  clearInterval(timer);timer=setInterval(()=>refresh().catch(()=>{}),10000);
-}
-async function refresh(){S=await api('GET','/api/state');render()}
+const $=s=>document.querySelector(s),GB=1024**3;
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fb=b=>b>=GB?(b/GB).toFixed(2)+' ГБ':(b/1048576).toFixed(0)+' МБ';
+const ST={active:['активен','ok'],expired:['истёк','bad'],limited:['лимит','bad'],disabled:['выключен','mut']};
+let S=null,tab='home',flt='all',q='';
+const toast=t=>{const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),2600)};
+async function api(u,m='GET',b){const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+  if(r.status===401&&u!=='/api/login'){login();throw 0}const j=await r.json().catch(()=>({}));if(!r.ok){toast(j.error||'Ошибка');throw j}return j}
+function login(){S=null;$('#root').innerHTML=`<div class="lg"><div class="md"><h3>Вход в панель</h3><label>Логин</label><input id="lu" autocomplete="username"><label>Пароль</label><input id="lp" type="password" autocomplete="current-password" onkeydown="event.key=='Enter'&&doLogin()"><div class="acts"><button class="btn p" style="width:100%" onclick="doLogin()">Войти</button></div></div></div>`}
+async function doLogin(){try{await api('/api/login','POST',{username:$('#lu').value,password:$('#lp').value});load()}catch(e){}}
+async function load(){try{S=await api('/api/state');render()}catch(e){}}
+const days=u=>u.expire?Math.ceil((u.expire-Date.now())/864e5):null;
 function render(){
-  if(!S)return;
-  document.title=S.settings.title;$('#ttl').textContent=S.settings.title;
-  const us=S.users,act=us.filter(u=>u.status==='active').length,tot=us.reduce((a,u)=>a+u.used,0);
-  const mem=S.sys.memUsed/S.sys.memTotal*100,ld=Math.min(100,S.sys.load/S.sys.cpus*100);
-  const d=Math.floor(S.sys.uptime/86400),h=Math.floor(S.sys.uptime%86400/3600);
-  $('#stats').innerHTML=`
-   <div class="glass st"><div class="l">Xray</div><div class="v"><span class="dot ${S.sys.xray?'on':''}"></span>${S.sys.xray?'Работает':'Остановлен'}</div><div class="h">Порт ${S.settings.port} · аптайм ${d}д ${h}ч</div></div>
-   <div class="glass st"><div class="l">Пользователи</div><div class="v">${act} <small style="font-size:15px;color:var(--mut)">/ ${us.length}</small></div><div class="h">активных / всего</div></div>
-   <div class="glass st"><div class="l">Трафик</div><div class="v">${fmt(tot)}</div><div class="h">всего использовано</div></div>
-   <div class="glass st"><div class="l">CPU · RAM</div><div class="v">${ld.toFixed(0)}% · ${mem.toFixed(0)}%</div><div class="bar"><i style="width:${ld}%"></i></div><div class="bar"><i style="width:${mem}%"></i></div></div>`;
-  const q=$('#q').value.toLowerCase();
-  const list=us.filter(u=>(u.name+u.note).toLowerCase().includes(q));
-  $('#grid').innerHTML=list.length?list.map((u,i)=>{
-    const pct=u.limit?Math.min(100,u.used/u.limit*100):0;
-    const exp=u.expire?new Date(u.expire).toLocaleDateString('ru-RU'):'∞';
-    const left=u.expire?Math.ceil((u.expire-Date.now())/864e5):null;
-    return `<div class="glass u" style="animation-delay:${i*.04}s">
-     <div class="top"><div class="av">${esc(u.name[0]||'?').toUpperCase()}</div><div style="min-width:0"><div class="nm">${esc(u.name)}</div><div class="nt">${esc(u.note||'без заметки')}</div></div><span class="badge ${u.status}">${{active:'активен',disabled:'выключен',expired:'истёк',limited:'лимит'}[u.status]}</span></div>
-     <div class="meta"><span>Трафик</span><b>${fmt(u.used)} / ${u.limit?fmt(u.limit):'∞'}</b></div>
-     <div class="bar"><i style="width:${u.limit?pct:100}%;${u.limit?'':'opacity:.25'}"></i></div>
-     <div class="meta"><span>До</span><b>${exp}${left!==null&&left>=0?` · ${left} дн.`:''}</b></div>
-     <div class="act"><button class="btn s" onclick="showSub('${u.id}')">🔗 Подписка</button><button class="btn g s" onclick="openUser('${u.id}')">✎</button><button class="btn g s" onclick="toggle('${u.id}',${!u.enabled})">${u.enabled?'⏸':'▶'}</button><button class="btn d s" onclick="del('${u.id}')">🗑</button></div>
-    </div>`}).join(''):`<div class="glass empty" style="grid-column:1/-1">Пока нет пользователей. Нажмите «Новый пользователь».</div>`;
-}
-function modal(html){$('#modal').innerHTML=`<div class="ov" onmousedown="if(event.target===this)closeM()"><div class="glass md">${html}</div></div>`}
-function closeM(){$('#modal').innerHTML=''}
-function openUser(id){
-  const u=id?S.users.find(x=>x.id===id):null;
-  modal(`<h3>${u?'Редактировать':'Новый пользователь'}</h3>
-   <label>Имя</label><input id="mn" value="${u?esc(u.name):''}" placeholder="Например: Иван">
-   <div class="row"><div><label>Лимит трафика, ГБ (0 = ∞)</label><input id="ml" type="number" min="0" step="any" value="${u?+(u.limit/GB).toFixed(2):0}"></div>
-   <div><label>${u?'Продлить на, дней (с сегодня)':'Срок, дней'} (0 = ∞)</label><input id="md" type="number" min="0" value="${u?'':30}" placeholder="${u?'не менять':''}"></div></div>
-   <label>Заметка</label><input id="mo" value="${u?esc(u.note):''}">
-   ${u?`<div class="mf" style="margin-top:12px"><button class="btn g s" onclick="resetT('${u.id}')">↺ Сбросить трафик</button></div>`:''}
-   <div class="mf"><button class="btn g" onclick="closeM()">Отмена</button><button class="btn" onclick="saveUser('${id||''}')">Сохранить</button></div>`);
-  setTimeout(()=>$('#mn').focus(),50);
-}
-async function saveUser(id){
-  const b={name:$('#mn').value,limitGb:$('#ml').value,note:$('#mo').value};
-  const d=$('#md').value;if(d!=='')b.days=d;
-  try{id?await api('PATCH','/api/users/'+id,b):await api('POST','/api/users',b);closeM();await refresh();toast('Сохранено ✓')}catch(e){toast(e.message)}
-}
-async function resetT(id){await api('PATCH','/api/users/'+id,{resetTraffic:true});closeM();await refresh();toast('Трафик сброшен')}
-async function toggle(id,v){await api('PATCH','/api/users/'+id,{enabled:v});await refresh()}
-async function del(id){if(!confirm('Удалить пользователя?'))return;await api('DELETE','/api/users/'+id);await refresh();toast('Удалён')}
-function copy(t){navigator.clipboard.writeText(t).then(()=>toast('Скопировано ✓'),()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();document.execCommand('copy');a.remove();toast('Скопировано ✓')})}
-let qrLoaded=null;
-function loadQR(){return qrLoaded||(qrLoaded=new Promise(r=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=r;s.onerror=r;document.head.appendChild(s)}))}
-async function showSub(id){
-  const u=S.users.find(x=>x.id===id),url=S.origin+'/sub/'+u.token;
-  modal(`<h3>Подписка: ${esc(u.name)}</h3><p style="color:var(--mut);font-size:13px">Отсканируйте QR или скопируйте ссылку в приложение (v2RayTun, Happ, Hiddify, V2Box…)</p>
-   <div class="qr"><div id="qrb"></div></div>
-   <div class="code" onclick="copy('${url}')" title="Копировать">${esc(url)}</div>
-   <div class="mf"><button class="btn g" onclick="copy('${url}')">Ссылка</button><button class="btn g" onclick="copyKey('${u.id}')">VLESS-ключ</button></div>
-   <div class="mf"><button class="btn" onclick="closeM()">Закрыть</button></div>`);
-  await loadQR();
-  if(window.QRCode)new QRCode($('#qrb'),{text:url,width:200,height:200,colorDark:'#0a0a1a',colorLight:'#ffffff'});
-}
-async function copyKey(id){const r=await api('GET','/api/users/'+id+'/link');copy(r.link)}
-function openSettings(){
-  const s=S.settings;
-  modal(`<h3>Настройки</h3>
-   <label>Название</label><input id="st1" value="${esc(s.title)}">
-   <label>IP или домен сервера (для ссылок)</label><input id="st2" value="${esc(s.host)}">
-   <div class="row"><div><label>Порт VPN</label><input id="st3" type="number" value="${s.port}"></div><div><label>SNI (маскировка)</label><input id="st4" value="${esc(s.sni)}"></div></div>
-   <label>Публичный URL панели для подписок (необязательно)</label><input id="st5" value="${esc(s.subBase)}" placeholder="https://panel.example.com">
-   <div class="mf"><button class="btn g" onclick="closeM()">Отмена</button><button class="btn" onclick="saveSettings()">Сохранить</button></div>`);
-}
-async function saveSettings(){
-  try{await api('PUT','/api/settings',{title:$('#st1').value,host:$('#st2').value,port:$('#st3').value,sni:$('#st4').value,subBase:$('#st5').value});closeM();await refresh();toast('Настройки сохранены, Xray перезапущен')}catch(e){toast(e.message)}
-}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM()});
-api('GET','/api/state').then(()=>start()).catch(()=>showLogin());
+  const T=[['home','◎','Обзор'],['users','☺','Клиенты'],['plans','◈','Тарифы'],['set','⚙','Настройки']];
+  $('#root').innerHTML=`<div class="app"><nav><div class="logo">${esc(S.settings.title)}<i>.</i></div>${T.map(t=>`<button class="t ${tab==t[0]?'on':''}" onclick="tab='${t[0]}';render()"><span>${t[1]}</span>${t[2]}</button>`).join('')}<div class="sp"></div><button class="t" onclick="api('/api/logout').then(login)">⎋ Выйти</button></nav><main>${{home,users,plans,set}[tab]()}</main></div>`}
+function home(){
+  const U=S.users,act=U.filter(u=>u.status=='active'),tot=U.reduce((a,u)=>a+u.used,0);
+  const soon=U.filter(u=>u.enabled&&u.expire&&u.expire>Date.now()&&u.expire-Date.now()<7*864e5);
+  const bad=U.filter(u=>u.status=='expired'||u.status=='limited'),m=S.sys.memUsed/S.sys.memTotal*100,c=Math.min(100,S.sys.load/S.sys.cpus*100);
+  const bar=(n,p)=>`<div style="margin-top:14px"><div class="k" style="display:flex;justify-content:space-between"><span>${n}</span><b>${p.toFixed(0)}%</b></div><div class="bar ${p>85?'w':''}"><i style="width:${p}%"></i></div></div>`;
+  return `<div class="top"><div><h1>Обзор</h1><div class="sub">${S.sys.xray?'Xray работает штатно':'⚠ Xray остановлен'}</div></div><button class="btn p" onclick="newUser()">＋ Новый клиент</button></div>
+  <div class="grid g4"><div class="card"><div class="k">Активные подписки</div><div class="v">${act.length}<small> из ${U.length}</small></div></div>
+  <div class="card"><div class="k">Весь трафик</div><div class="v">${fb(tot)}</div></div>
+  <div class="card"><div class="k">Истекают за 7 дней</div><div class="v">${soon.length}</div></div>
+  <div class="card"><div class="k">Требуют внимания</div><div class="v">${bad.length}</div></div></div>
+  <div class="grid g2" style="margin-top:14px"><div class="card"><b>Сервер</b>${bar('CPU',c)}${bar('Память',m)}<div class="k" style="margin-top:14px">Аптайм: ${Math.floor(S.sys.uptime/86400)} д ${Math.floor(S.sys.uptime%86400/3600)} ч</div></div>
+  <div class="card"><b>Скоро истекают / исчерпаны</b>${[...soon,...bad].slice(0,6).map(u=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--ln);cursor:pointer" onclick="openUser('${u.id}')"><span>${esc(u.name)}</span><span class="tag ${ST[u.status][1]}">${u.status=='active'?days(u)+' дн.':ST[u.status][0]}</span></div>`).join('')||'<p class="k">Всё в порядке ✨</p>'}</div></div>`}
+function users(){
+  const F={all:'Все',active:'Активные',soon:'Истекают',expired:'Истекли',limited:'Лимит',disabled:'Выключены'};
+  const ok=u=>flt=='all'||(flt=='soon'?u.enabled&&u.expire&&u.expire>Date.now()&&u.expire-Date.now()<7*864e5:u.status==flt);
+  const L=S.users.filter(u=>ok(u)&&(u.name+u.note+(u.plan||'')).toLowerCase().includes(q.toLowerCase()));
+  return `<div class="top"><div><h1>Клиенты</h1><div class="sub">${S.users.length} всего · ${S.users.filter(u=>u.status=='active').length} активных</div></div><button class="btn p" onclick="newUser()">＋ Новый клиент</button></div>
+  <div class="chips">${Object.entries(F).map(([k,v])=>`<span class="chip ${flt==k?'on':''}" onclick="flt='${k}';render()">${v}</span>`).join('')}</div>
+  <input placeholder="Поиск по имени, тарифу, заметке" value="${esc(q)}" oninput="q=this.value;clearTimeout(window._t);window._t=setTimeout(()=>{render();const i=document.querySelector('main input');i.focus();i.setSelectionRange(99,99)},250)" style="margin-bottom:14px">
+  <div class="card tw" style="padding:6px"><table><tr><th>Клиент</th><th>Тариф</th><th>Трафик</th><th>Срок</th><th>Статус</th></tr>${L.map(u=>{const p=u.limit?Math.min(100,u.used/u.limit*100):0;return `<tr class="r" onclick="openUser('${u.id}')"><td><b>${esc(u.name)}</b><div class="k">${esc(u.note)}</div></td><td>${esc(u.plan||'—')}</td><td>${fb(u.used)}${u.limit?' / '+fb(u.limit):' · ∞'}<div class="bar ${p>90?'w':''}"><i style="width:${u.limit?p:100}%;${u.limit?'':'opacity:.35'}"></i></div></td><td>${u.expire?new Date(u.expire).toLocaleDateString('ru-RU')+'<div class="k">'+days(u)+' дн.</div>':'бессрочно'}</td><td><span class="tag ${ST[u.status][1]}">${ST[u.status][0]}</span></td></tr>`}).join('')||'<tr><td colspan=5 class="k">Никого не найдено</td></tr>'}</table></div>`}
+function plans(){return `<div class="top"><div><h1>Тарифы</h1><div class="sub">Шаблоны выдачи доступа в один клик. Изменение тарифа не трогает выданные подписки.</div></div><button class="btn p" onclick="planModal()">＋ Новый тариф</button></div>
+  <div class="grid g3">${S.plans.map(p=>`<div class="card"><div style="display:flex;justify-content:space-between"><b style="font-size:18px">${esc(p.name)}</b><b style="color:var(--a)">${p.price?p.price+' ₽':'бесплатно'}</b></div>
+  <div class="k" style="margin-top:12px">Срок</div><b>${p.days?p.days+' дн.':'бессрочно'}</b><div class="k" style="margin-top:8px">Трафик</div><b>${p.limitGb?p.limitGb+' ГБ':'без лимита'}</b>
+  <div class="acts"><button class="btn" onclick="planModal('${p.id}')">Изменить</button><button class="btn d" onclick="delPlan('${p.id}')">Удалить</button></div></div>`).join('')||'<p class="k">Тарифов пока нет</p>'}</div>`}
+function set(){const s=S.settings,f=(id,l,v,h='')=>`<label>${l}</label><input id="${id}" value="${esc(v)}">${h?`<div class="k" style="margin-top:4px">${h}</div>`:''}`;
+  return `<h1>Настройки</h1><div class="sub">Адрес сервера, оформление подписки и Reality</div><div class="card" style="max-width:560px">${f('s_title','Название сервиса',s.title,'Так профиль называется в приложениях клиентов')}${f('s_host','Адрес сервера (IP или домен)',s.host)}<div class="row"><div>${f('s_port','Порт VPN',s.port)}</div><div>${f('s_sni','SNI (маскировка)',s.sni)}</div></div>${f('s_sub','Публичный URL панели',s.subBase,'Для ссылок подписки, например https://домен:8443')}${f('s_sup','Поддержка',s.support||'','Ссылка на Telegram или сайт')}
+  <div class="acts"><button class="btn p" onclick="saveSet()">Сохранить</button></div></div>`}
+async function saveSet(){await api('/api/settings','PUT',{title:$('#s_title').value,host:$('#s_host').value,port:$('#s_port').value,sni:$('#s_sni').value,subBase:$('#s_sub').value,support:$('#s_sup').value});toast('Сохранено ✓');load()}
+function modal(h){const o=document.createElement('div');o.className='ov';o.onclick=e=>e.target==o&&o.remove();o.innerHTML=`<div class="md">${h}</div>`;document.body.append(o);return o}
+const closeM=()=>document.querySelector('.ov')?.remove();
+function newUser(){modal(`<h3>Новый клиент</h3><label>Имя</label><input id="n_name" autofocus><label>Тариф</label><select id="n_plan"><option value="">Свои параметры</option>${S.plans.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+  <div class="row"><div><label>Дней (0 = бессрочно)</label><input id="n_days" type="number" value="30"></div><div><label>Лимит ГБ (0 = ∞)</label><input id="n_lim" type="number" value="0"></div></div><label>Заметка</label><input id="n_note">
+  <div class="acts"><button class="btn p" onclick="addUser()">Создать</button><button class="btn" onclick="closeM()">Отмена</button></div>`)}
+async function addUser(){const u=await api('/api/users','POST',{name:$('#n_name').value,planId:$('#n_plan').value,days:$('#n_days').value,limitGb:$('#n_lim').value,note:$('#n_note').value});closeM();await load();openUser(u.id)}
+let qrL;const loadQR=()=>qrL||(qrL=new Promise(r=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=r;s.onerror=r;document.head.append(s)}));
+async function openUser(id){const u=S.users.find(x=>x.id==id);if(!u)return;const url=S.origin+'/sub/'+u.token;closeM();
+  modal(`<h3>${esc(u.name)} <span class="tag ${ST[u.status][1]}">${ST[u.status][0]}</span></h3><div class="k">Использовано ${fb(u.used)} · ↑${fb(u.up)} ↓${fb(u.down)}</div><div class="qr"><div id="qrb"></div></div><code>${esc(url)}</code>
+  <div class="acts"><button class="btn p" onclick="navigator.clipboard.writeText('${url}');toast('Ссылка скопирована ✓')">Скопировать ссылку</button><button class="btn" onclick="window.open('${url}?raw=1')">Открыть</button></div>
+  <label>Имя</label><input id="e_name" value="${esc(u.name)}"><div class="row"><div><label>Лимит ГБ (0 = ∞)</label><input id="e_lim" type="number" value="${(u.limit/GB).toFixed(2).replace(/\.?0+$/,'')||0}"></div><div><label>Продлить: дней от сегодня</label><input id="e_days" type="number" placeholder="не менять"></div></div><label>Заметка</label><input id="e_note" value="${esc(u.note)}">
+  <div class="acts"><button class="btn p" onclick="saveUser('${id}')">Сохранить</button><button class="btn" onclick="patch('${id}',{enabled:${!u.enabled}})">${u.enabled?'Выключить':'Включить'}</button><button class="btn" onclick="patch('${id}',{resetTraffic:true})">Сбросить трафик</button><button class="btn d" onclick="delUser('${id}')">Удалить</button></div>`);
+  await loadQR();try{new QRCode($('#qrb'),{text:url,width:170,height:170})}catch(e){}}
+async function patch(id,b){await api('/api/users/'+id,'PATCH',b);await load();openUser(id)}
+function saveUser(id){const b={name:$('#e_name').value,note:$('#e_note').value,limitGb:$('#e_lim').value||0};if($('#e_days').value!=='')b.days=$('#e_days').value;patch(id,b);toast('Сохранено ✓')}
+async function delUser(id){if(!confirm('Удалить клиента?'))return;await api('/api/users/'+id,'DELETE');closeM();load()}
+function planModal(id){const p=S.plans.find(x=>x.id==id)||{name:'',price:0,days:30,limitGb:0};modal(`<h3>${id?'Изменить':'Новый'} тариф</h3><label>Название</label><input id="p_name" value="${esc(p.name)}"><div class="row"><div><label>Цена, ₽</label><input id="p_price" type="number" value="${p.price}"></div><div><label>Срок, дней (0 = ∞)</label><input id="p_days" type="number" value="${p.days}"></div></div><label>Лимит трафика, ГБ (0 = ∞)</label><input id="p_lim" type="number" value="${p.limitGb}">
+  <div class="acts"><button class="btn p" onclick="savePlan('${id||''}')">Сохранить</button><button class="btn" onclick="closeM()">Отмена</button></div>`)}
+async function savePlan(id){const b={name:$('#p_name').value,price:$('#p_price').value,days:$('#p_days').value,limitGb:$('#p_lim').value};await api(id?'/api/plans/'+id:'/api/plans',id?'PUT':'POST',b);closeM();load()}
+async function delPlan(id){if(!confirm('Удалить тариф?'))return;await api('/api/plans/'+id,'DELETE');load()}
+load();setInterval(()=>S&&!document.querySelector('.ov')&&document.activeElement.tagName!='INPUT'&&load(),20000);
 </script>
-</body>
-</html>
